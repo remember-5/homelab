@@ -12,7 +12,7 @@ services:
       - .env
     environment:
       - "TZ=Asia/Shanghai"
-      # 代理配置模板
+      # Proxy configuration template
       # - http_proxy=http://127.0.0.1:1080
       # - https_proxy=http://127.0.0.1:1080
       # - no_proxy=localhost,127.0.0.1
@@ -20,7 +20,7 @@ services:
       - "3306:3306"
     volumes:
       - ./data:/var/lib/mysql
-      # 特性配置文件命名 xx.cnf aa.cnf bb.cnf cc.cnf
+      # Use descriptive names such as xx.cnf, aa.cnf, and bb.cnf for feature configuration files.
       - ./config:/etc/mysql/conf.d
       - ./logs:/logs
       - /etc/timezone:/etc/timezone:ro

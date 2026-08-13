@@ -1,4 +1,3 @@
-version: '3.3'
 services:
   standalone_fate:
     container_name: standalone_fate

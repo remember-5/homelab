@@ -1,4 +1,4 @@
-// 连接到 admin 数据库, 创建用户
+// Connect to the admin database and create a user.
 db.getSiblingDB('admin').createUser({
     user: 'root',
     pwd: '123456',

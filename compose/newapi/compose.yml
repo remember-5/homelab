@@ -12,7 +12,7 @@
 #
 # ⚠️  IMPORTANT: Change all default passwords before deploying to production!
 
-version: '3.8' # For compatibility with older Docker versions
+# 使用现代 Docker Compose 格式，无需 version 声明。
 
 services:
   new-api:

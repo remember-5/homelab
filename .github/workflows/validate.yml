@@ -1,0 +1,14 @@
+name: Validate Repository
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-compose-action@v1
+      - name: Validate Compose and Shell syntax
+        run: ./scripts/validate-repository.sh

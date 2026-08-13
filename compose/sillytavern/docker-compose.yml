@@ -1,8 +1,14 @@
 services:
   sillytavern:
     container_name: sillytavern
-    image: goolashe/sillytavern:latest
-    restart: unless-stopped
+    image: goolashe/sillytavern:1.18.0
+    restart: always
+    environment:
+      - TZ=Asia/Shanghai
+      # Proxy configuration template
+      # - http_proxy=http://127.0.0.1:1080
+      # - https_proxy=http://127.0.0.1:1080
+      # - no_proxy=localhost,127.0.0.1
     ports:
       - "8000:8000"
     volumes:

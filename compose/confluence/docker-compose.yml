@@ -1,4 +1,3 @@
-version: '3.4'
 services:
   confluence:
     image: haxqer/confluence:9.2.1

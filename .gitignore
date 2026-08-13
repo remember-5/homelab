@@ -1,5 +1,9 @@
 *.iml
 .idea
-.DS_Stroe
+.DS_Store
 
 .env
+
+# Locally generated files that may contain credentials
+compose/komari/.komari-auto-discovery.json
+compose/redis/machine-cluster/node-*/

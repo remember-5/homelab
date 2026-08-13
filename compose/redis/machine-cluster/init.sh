@@ -1,26 +1,39 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ $# -ne 1 || -z "${REDIS_PASSWORD:-}" ]]; then
+  echo "Usage: REDIS_PASSWORD='strong-password' $0 <cluster-reachable-ip>" >&2
+  exit 2
+fi
+
+cluster_ip="$1"
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 for port in $(seq 6379 6384); do
-mkdir -p ./node-${port}/conf
-touch ./node-${port}/conf/redis.conf
-cat <<EOF >./node-${port}/conf/redis.conf
-# 指定端口
+  config_dir="$script_dir/node-${port}/conf"
+  mkdir -p "$config_dir"
+  cat >"$config_dir/redis.conf" <<EOF
+# Service port
 port ${port}
-requirepass 1234
-# 绑定地址
+requirepass ${REDIS_PASSWORD}
+# Bind address
 bind 0.0.0.0
-# 关闭保护模式
+# Disable protected mode
 protected-mode no
 daemonize no
-# 追加的方式记录所有写操作的命令到磁盘文件
+# Persist write operations with AOF
 appendonly yes
-# 启用集群
+# Enable cluster mode
 cluster-enabled yes
-# 集群配置文件
+# Cluster configuration file
 cluster-config-file nodes.conf
-# 集群节点连接超时时间
+# Cluster node timeout
 cluster-node-timeout 5000
-# 配置ip
-cluster-announce-ip $1
+# Public address announced by each cluster node
+cluster-announce-ip ${cluster_ip}
 cluster-announce-port ${port}
 cluster-announce-bus-port 1${port}
 EOF
 done
+
+echo "Generated configuration for 6 Redis nodes."

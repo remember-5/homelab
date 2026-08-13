@@ -1,4 +1,3 @@
-version: '3.3'
 services:
   wvp_pro:
     image: 648540858/wvp_pro

@@ -1,7 +1,14 @@
 services:
   komari:
-    image: ghcr.io/komari-monitor/komari:latest
+    image: ghcr.io/komari-monitor/komari:1.4.2
     container_name: komari
+    restart: always
+    environment:
+      - TZ=Asia/Shanghai
+      # Proxy configuration template
+      # - http_proxy=http://127.0.0.1:1080
+      # - https_proxy=http://127.0.0.1:1080
+      # - no_proxy=localhost,127.0.0.1
     ports:
       - 25774:25774
     volumes:

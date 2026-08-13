@@ -1,10 +1,16 @@
 services:
   portainer:
-    image: portainer/portainer-ce:latest
+    image: portainer/portainer-ce:2.39.6
     container_name: portainer
     restart: always
+    environment:
+      - TZ=Asia/Shanghai
+      # Proxy configuration template
+      # - http_proxy=http://127.0.0.1:1080
+      # - https_proxy=http://127.0.0.1:1080
+      # - no_proxy=localhost,127.0.0.1
     ports:
-      - "8000:8000" # TCP tunnel server 可选
+      - "8000:8000" # Optional TCP tunnel server
       - "9000:9000" # http
       - "9443:9443" # https
     volumes:

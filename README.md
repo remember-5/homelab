@@ -1,22 +1,47 @@
-# 说明
-日常的shell、docker文件的记录，有部分下载地址是官网下载，如遇到下载困难，请另行更换下载资源
+# Shell and Docker Compose Examples
 
-不定期维护。
+This repository collects operational Shell scripts and Docker Compose deployment examples. Each service lives under `compose/<service-name>/`; read its `README.md` before starting it.
 
-# Docker compose convertion k8s yaml
+## Quick Start
 
-使用工具 [Kompose](https://github.com/kubernetes/kompose)
+```bash
+cd compose/mysql
+cp .env.example .env
+# Set passwords and other sensitive values in .env.
+docker compose up -d
+```
 
-kubernetes文档 https://kubernetes.io/zh-cn/docs/tasks/configure-pod-container/translate-compose-kubernetes/
+Do not commit `.env`, private keys, certificates, or access tokens. Where available, use the commented proxy environment-variable template in the Compose file.
 
-# docker教程
-https://yeasy.gitbook.io/
+## Validation
 
-# docker 镜像源
-https://github.com/cmliu/CF-Workers-docker.io
-https://dockerx.org/about/
-https://mirror.kentxxq.com/image
+Run this before committing:
 
+```bash
+./scripts/validate-repository.sh
+```
+
+Run the strict audit after adding or modifying a Compose service:
+
+```bash
+./scripts/validate-repository.sh --strict
+```
+
+See [AGENTS.md](AGENTS.md) for repository rules. Historical examples are being migrated incrementally; all new and modified services must follow the current standard.
+
+## Convert Docker Compose to Kubernetes YAML
+
+Use [Kompose](https://github.com/kubernetes/kompose).
+
+- Kubernetes documentation: https://kubernetes.io/docs/tasks/configure-pod-container/translate-compose-kubernetes/
+
+## Docker References
+
+- Docker tutorial: https://yeasy.gitbook.io/
+- Docker registry mirrors:
+  - https://github.com/cmliu/CF-Workers-docker.io
+  - https://dockerx.org/about/
+  - https://mirror.kentxxq.com/image
 
 ```json
 {
@@ -26,29 +51,27 @@ https://mirror.kentxxq.com/image
     "https://docker.m.daocloud.io"
   ]
 }
-
-
 ```
 
+## Proxy Build Examples
 
+```bash
+docker build -t my-image:1.0.0 --no-cache \
+  --build-arg http_proxy=http://127.0.0.1:1080 \
+  --build-arg https_proxy=http://127.0.0.1:1080 .
 
-# 运行增加参数
-`docker build -t --no-cache --build-arg http_proxy=http://127.0.0.1:1080 --build-arg https_proxy=http://127.0.0.1:1080 .`
+docker compose up -d --build \
+  -e http_proxy=http://127.0.0.1:1080 \
+  -e https_proxy=http://127.0.0.1:1080
+```
 
-`docker-compose up -d --build -e http_proxy=http://127.0.0.1:1080 -e https_proxy=http://127.0.0.1:1080 --no-cache`
-
-
-# docker-compose 配合 docker 
+## Build With Docker Compose
 
 ```dockerfile
-# 构建容器
-FROM node:18.20.4-alpine as build
+FROM node:18.20.4-alpine AS build
 WORKDIR /app
 
-# 定义我们将在构建阶段使用的参数
 ARG ENV_ARG
-
-# 设置环境变量
 ENV BUILD_ENV=$ENV_ARG
 
 COPY package.json .
@@ -56,14 +79,12 @@ RUN npm install --registry https://registry.npmmirror.com
 COPY . /app
 RUN npm run build:${BUILD_ENV}
 
-# 生产容器
 FROM nginx:1.27.1-alpine
 COPY --from=build /app/dist /usr/share/nginx/html
 COPY deploy/nginx.conf /etc/nginx/nginx.conf
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
 ```
-
 
 ```yaml
 services:
@@ -73,104 +94,68 @@ services:
       args:
         - http_proxy=${http_proxy}
         - https_proxy=${https_proxy}
-        - ENV_ARG=${ENV_ARG}  # 这里可以设置为 'prod', 'dev' 等值
-    image: my-page:latest
+        - ENV_ARG=${ENV_ARG}
+    image: my-page:1.0.0
     ports:
       - 8080:80
 ```
 
+## Docker Proxy Configuration
 
-# 配置 HTTP/HTTPS 网络代理
+### Configure dockerd
 
-使用Docker的过程中，因为网络原因，通常需要使用 HTTP/HTTPS 代理来加速镜像拉取、构建和使用。下面是常见的三种场景。
+Create `/etc/systemd/system/docker.service.d/http-proxy.conf`:
 
-## 为 dockerd 设置网络代理
-
-"docker pull" 命令是由 dockerd 守护进程执行。而 dockerd 守护进程是由 systemd 管理。因此，如果需要在执行 "docker pull" 命令时使用 HTTP/HTTPS 代理，需要通过 systemd 配置。
-
-- 为 dockerd 创建配置文件夹。
-```
-sudo mkdir -p /etc/systemd/system/docker.service.d
-```
-
-- 为 dockerd 创建 HTTP/HTTPS 网络代理的配置文件，文件路径是 /etc/systemd/system/docker.service.d/http-proxy.conf 。并在该文件中添加相关环境变量。
-```
+```ini
 [Service]
 Environment="HTTP_PROXY=http://proxy.example.com:8080/"
 Environment="HTTPS_PROXY=http://proxy.example.com:8080/"
 Environment="NO_PROXY=localhost,127.0.0.1,.example.com"
 ```
 
-- 刷新配置并重启 docker 服务。
-```
+Reload systemd and restart Docker:
+
+```bash
 sudo systemctl daemon-reload
 sudo systemctl restart docker
 ```
 
-## 为 docker 容器设置网络代理
+### Configure Container Proxy Variables
 
-在容器运行阶段，如果需要使用 HTTP/HTTPS 代理，可以通过更改 docker 客户端配置，或者指定环境变量的方式。
+Add the following to `~/.docker/config.json` when containers need a proxy:
 
-- 更改 docker 客户端配置：创建或更改 ~/.docker/config.json，并在该文件中添加相关配置。
-```
+```json
 {
- "proxies":
- {
-   "default":
-   {
-     "httpProxy": "http://proxy.example.com:8080/",
-     "httpsProxy": "http://proxy.example.com:8080/",
-     "noProxy": "localhost,127.0.0.1,.example.com"
-   }
- }
+  "proxies": {
+    "default": {
+      "httpProxy": "http://proxy.example.com:8080/",
+      "httpsProxy": "http://proxy.example.com:8080/",
+      "noProxy": "localhost,127.0.0.1,.example.com"
+    }
+  }
 }
 ```
 
-- 指定环境变量：运行 "docker run" 命令时，指定相关环境变量。
+### Configure Build Proxy Arguments
 
-| 环境变量 |  docker run 示例 |
-| -------- | ---------------- |
-| HTTP_PROXY | --env HTTP_PROXY="http://proxy.example.com:8080/" |
-| HTTPS_PROXY | --env HTTPS_PROXY="http://proxy.example.com:8080/" |
-| NO_PROXY | --env NO_PROXY="localhost,127.0.0.1,.example.com" |
-
-## 为 docker build 过程设置网络代理
-
-在容器构建阶段，如果需要使用 HTTP/HTTPS 代理，可以通过指定 "docker build" 的环境变量，或者在 Dockerfile 中指定环境变量的方式。
-
-- 使用 "--build-arg" 指定 "docker build" 的相关环境变量
-```
+```bash
 docker build \
-    --build-arg "HTTP_PROXY=http://proxy.example.com:8080/" \
-    --build-arg "HTTPS_PROXY=http://proxy.example.com:8080/" \
-    --build-arg "NO_PROXY=localhost,127.0.0.1,.example.com" .
+  --build-arg "HTTP_PROXY=http://proxy.example.com:8080/" \
+  --build-arg "HTTPS_PROXY=http://proxy.example.com:8080/" \
+  --build-arg "NO_PROXY=localhost,127.0.0.1,.example.com" .
 ```
 
-- 在 Dockerfile 中指定相关环境变量
+## FAQ
 
-| 环境变量 | Dockerfile 示例 |
-| -------- | ---------------- |
-| HTTP_PROXY | ENV HTTP_PROXY="http://proxy.example.com:8080/" |
-| HTTPS_PROXY | ENV HTTPS_PROXY="http://proxy.example.com:8080/" |
-| NO_PROXY | ENV NO_PROXY="localhost,127.0.0.1,.example.com" |
+### `mkdir` Does Not Work in an ARM Dockerfile
 
-# FAQ
+Prefer `WORKDIR`, which creates the directory automatically:
 
-## ARM下dockerfile中的mkdir不可用
 ```dockerfile
-# 贝尔实验室 Spring 官方推荐镜像 JDK下载地址 https://bell-sw.com/pages/downloads/
 FROM bellsoft/liberica-openjdk-debian:17.0.11-cds
 
-# 这个mkdir无法运行
-# RUN mkdir -p /app/server
-
-# 建议使用WORKDIR,这样会自动创建
 WORKDIR /app/server
-
 ENV SERVER_PORT=8080 LANG=C.UTF-8 LC_ALL=C.UTF-8 JAVA_OPTS="" TZ=Asia/Shanghai
 
 EXPOSE ${SERVER_PORT}
-
 ```
-
-

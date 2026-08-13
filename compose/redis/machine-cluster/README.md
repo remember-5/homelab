@@ -1,20 +1,27 @@
-# 安装
+# Redis Cluster
 
-## 创建文件
+Six-node Redis Cluster deployment example.
 
-```
-sh init.sh ${IP地址}
-```
+## Generate Configuration
 
-
-## 安装redis集群
-```
-docker-compose up -d
+```bash
+REDIS_PASSWORD='replace-with-a-strong-password' ./init.sh 192.168.1.10
 ```
 
+The IP address must be reachable by every cluster node. Generated `node-*/conf/redis.conf` files contain the password and must not be committed.
 
-## 配置集群
+## Start the Cluster
+
+```bash
+docker compose -f docker-compose-cluster.yml up -d
 ```
-docker exec -it redis-6379 /bin/bash
-redis-cli  -a 之前设置的密码 --cluster create 配置文件中的IP地址:6379 IP地址:6380 IP地址:6381 IP地址:6382 IP地址:6383 IP地址:6384   --cluster-replicas 1
+
+## Create the Cluster
+
+```bash
+docker exec -it redis-6379 redis-cli -a "$REDIS_PASSWORD" \
+  --cluster create \
+  192.168.1.10:6379 192.168.1.10:6380 192.168.1.10:6381 \
+  192.168.1.10:6382 192.168.1.10:6383 192.168.1.10:6384 \
+  --cluster-replicas 1
 ```

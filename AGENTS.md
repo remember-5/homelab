@@ -1,75 +1,71 @@
 # AGENTS.md
 
-本文件为 AI 模型提供在本仓库中编写 Docker 和 Docker Compose 配置的规范指导。
+This file defines the standards for Docker and Docker Compose content in this repository.
 
-## 角色定义
+## Role
 
-你是一个 DevOps 基础设施助手，负责为用户提供基于 Docker 和 Docker Compose 的软件部署方案。所有输出的文档和注释使用**中文**。
+Act as a DevOps infrastructure assistant and provide Docker and Docker Compose deployment solutions. Documentation, comments, user-facing script output, and commit messages must be written in English by default. Use Chinese only when a service requires Chinese-language content or when the user explicitly requests it.
 
-## 目录与文件规范
+## Directory and File Layout
 
-### 目录结构
-
-每个服务必须创建独立目录，目录名使用小写英文，与软件名称一致：
+Each service must use its own lowercase English directory named after the software:
 
 ```
 <service-name>/
-├── docker-compose.yml        # 必须：主部署文件
-├── README.md                 # 必须：中文说明文档
-├── .env                      # 可选：环境变量（含敏感信息时使用）
-├── config/                   # 可选：配置文件挂载目录
-└── docker-compose-<变体>.yml  # 可选：替代部署方案（如 docker-compose-mysql.yml）
+├── docker-compose.yml              # Required primary deployment file
+├── README.md                       # Required English documentation
+├── .env                            # Optional local variables, never committed
+├── .env.example                    # Required sanitized template when .env is used
+├── config/                         # Optional mounted configuration
+└── docker-compose-<variant>.yml    # Optional deployment variant
 ```
 
-### 文件命名规则
+- New services must use `docker-compose.yml` as the primary file. Migrate historical `compose.yml` files when modifying those services.
+- Use `docker-compose-<variant>.yml` for alternative deployments, such as `docker-compose-mysql.yml` or `docker-compose-cluster.yml`.
+- Keep mounted configuration in `config/`.
+- Store persistent data under `data/` or `./data`.
+- Ignore `.env` through `.gitignore`. Commit only `.env.example`, without usable passwords, keys, or tokens.
 
-- 主文件固定命名 `docker-compose.yml`
-- 存在多种部署方案时，使用 `docker-compose-<变体描述>.yml` 命名（如 `docker-compose-mysql.yml`、`docker-compose-cluster.yml`）
-- 配置文件放在 `config/` 目录下
-- 数据持久化目录使用 `data/` 或 `./data`
+## Docker Compose Standards
 
-## Docker Compose 编写规范
-
-### 基本格式
-
-使用**无版本声明**的现代格式（不写 `version: "3"` 等声明）：
+Use modern Compose syntax without a `version` declaration:
 
 ```yaml
 services:
   <service-name>:
-    image: <image>:<明确版本号>
+    image: <image>:<explicit-version>
     container_name: <service-name>
     restart: always
     environment:
       - TZ=Asia/Shanghai
     ports:
-      - "<宿主端口>:<容器端口>"
+      - "<host-port>:<container-port>"
     volumes:
       - ./data:/var/lib/<service-path>
 ```
 
-### 强制规则
+### Required Rules
 
-| 规则 | 说明 |
-|------|------|
-| 明确镜像版本 | 禁止使用 `latest`，必须指定具体版本号如 `rabbitmq:4.0.5-management` |
-| restart 策略 | 所有服务必须设置 `restart: always` |
-| container_name | 必须显式设置，使用服务名称 |
-| 时区设置 | 环境变量中必须包含 `TZ=Asia/Shanghai` |
-| 数据持久化 | 所有有状态服务必须挂载数据卷，禁止数据仅存于容器内 |
+| Rule | Requirement |
+| --- | --- |
+| Explicit image version | Do not use `latest`, `main`, `master`, or an untagged image. Use a concrete version such as `rabbitmq:4.0.5-management`. |
+| Restart policy | Every service must set `restart: always`. |
+| Container name | Every service must set an explicit `container_name` based on the service name. |
+| Time zone | Every service environment must include `TZ=Asia/Shanghai`. |
+| Persistent data | Stateful services must mount persistent storage; do not keep data only inside a container. |
 
-### 卷挂载规范
+### Volumes
 
-使用相对路径挂载到当前服务目录下：
+Use relative mounts within the service directory when possible:
 
 ```yaml
 volumes:
-  - ./data:/var/lib/<xxx>         # 数据目录
-  - ./config:/etc/<xxx>           # 配置文件
-  - ./logs:/var/log/<xxx>         # 日志目录（如需要）
+  - ./data:/var/lib/<service>
+  - ./config:/etc/<service>
+  - ./logs:/var/log/<service>
 ```
 
-对于多容器共享的场景，使用命名卷并在文件底部声明：
+For data shared by multiple containers, use named volumes declared at the bottom of the file:
 
 ```yaml
 volumes:
@@ -77,10 +73,12 @@ volumes:
   service_config:
 ```
 
-### 网络配置
+### Networks and Dependencies
 
-- 单容器服务：不需要额外网络配置，使用默认网络
-- 多容器服务（如应用+数据库）：必须创建自定义网络
+- Single-container services can use the default network.
+- Multi-container deployments must define a custom bridge network.
+- Use `depends_on` for startup dependencies.
+- For critical databases and caches, add a health check and prefer `condition: service_healthy` for dependent services.
 
 ```yaml
 networks:
@@ -88,15 +86,15 @@ networks:
     driver: bridge
 ```
 
-### 环境变量
+### Environment Variables
 
-- 少量变量直接写在 `environment` 中
-- 包含敏感信息（密码、密钥）时，使用 `.env` 文件配合 `env_file` 引用
-- 环境变量使用列表格式 `- KEY=VALUE`
+- Use list syntax: `- KEY=VALUE`.
+- Small non-sensitive settings may be written directly under `environment`.
+- Passwords, keys, and tokens must be supplied through `.env` and `env_file` or via an external secret manager. Never hardcode production credentials in YAML.
 
-### 资源限制（可选）
+### Optional Resource and Health Settings
 
-对资源消耗较大的服务添加资源限制：
+Apply resource limits to resource-intensive services when appropriate:
 
 ```yaml
 deploy:
@@ -104,14 +102,9 @@ deploy:
     limits:
       cpus: '4'
       memory: 4G
-    reservations:
-      cpus: '2'
-      memory: 2G
 ```
 
-### 健康检查（可选）
-
-对关键服务添加健康检查：
+Add health checks for important services:
 
 ```yaml
 healthcheck:
@@ -122,67 +115,67 @@ healthcheck:
   start_period: 10s
 ```
 
-### 服务依赖
+### Proxy Template
 
-多容器场景中使用 `depends_on` 声明启动顺序：
-
-```yaml
-depends_on:
-  - db
-```
-
-### 代理配置
-
-需要在注释中保留代理配置模板，方便中国网络环境使用：
+Keep this commented proxy template in services that may need it:
 
 ```yaml
-#      - http_proxy=http://127.0.0.1:1080
-#      - https_proxy=http://127.0.0.1:1080
-#      - no_proxy=localhost,127.0.0.1
+# - http_proxy=http://127.0.0.1:1080
+# - https_proxy=http://127.0.0.1:1080
+# - no_proxy=localhost,127.0.0.1
 ```
 
-## README.md 编写规范
+## README Standard
 
-每个服务目录下必须包含中文 README.md，结构如下：
+Every service directory must contain an English `README.md` with the following sections:
 
 ```markdown
-# <服务名称>
+# <Service Name>
 
-<一句话描述>
+One-sentence description.
 
-## 快速启动
+## Quick Start
 
-docker-compose up -d
+docker compose up -d
 
-## 访问地址
+## Access
 
-- 管理界面: http://localhost:<port>
-- 默认用户名: xxx
-- 默认密码: xxx
+- URL: http://localhost:<port>
+- Default username: xxx
+- Default password: xxx
 
-## 配置说明
+## Configuration
 
-对 docker-compose.yml 中关键配置项的解释
+Explain non-standard settings in docker-compose.yml.
 
-## 常见问题（如有）
+## Troubleshooting
 
-已知问题和解决方案
+Document known issues and resolutions when applicable.
 ```
 
-### README 要求
+Document default addresses, ports, credentials, migration procedures, and plugin installation steps where applicable.
 
-- 全文使用中文
-- 包含默认访问地址和端口
-- 如有默认账号密码必须标注
-- 对非常规配置项进行说明
-- 如涉及插件安装、数据迁移等操作，提供完整步骤
+## Prohibited Practices
 
-## 禁止事项
+- Using `latest`, `main`, `master`, or untagged images.
+- Omitting persistent storage for stateful services.
+- Hardcoding production passwords in Compose YAML.
+- Omitting `restart: always`, `container_name`, or `TZ=Asia/Shanghai`.
+- Committing `.env`, private keys, certificates, or usable access tokens.
+- Adding non-English documentation or comments unless the user or service requirements explicitly call for them.
 
-- **禁止**在 docker-compose.yml 中使用 `latest` 标签
-- **禁止**有状态服务不挂载数据卷
-- **禁止**在 YAML 文件中硬编码生产环境密码（使用 `.env` 文件或注释提示用户修改）
-- **禁止**省略 `restart` 策略
-- **禁止**省略 `container_name`
-- **禁止**省略时区配置
-- **禁止**使用英文编写文档和注释（代码关键字除外）
+## Validation
+
+Run the following before committing to validate Compose parsing and Shell syntax:
+
+```bash
+./scripts/validate-repository.sh
+```
+
+Run the strict audit after adding or modifying Compose services:
+
+```bash
+./scripts/validate-repository.sh --strict
+```
+
+The strict audit checks floating image tags, obsolete `version` declarations, container names, restart policies, and time zone configuration. Historical examples may be migrated incrementally, but new changes must not introduce violations.

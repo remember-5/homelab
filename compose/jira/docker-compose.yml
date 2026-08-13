@@ -1,4 +1,3 @@
-version: '3.4'
 services:
   jira:
     image: haxqer/jira:9.17.5
