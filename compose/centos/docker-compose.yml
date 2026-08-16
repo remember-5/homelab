@@ -1,6 +1,0 @@
-services:
-  centos:
-    container_name: centos-test
-    image: 'centos:centos7'
-    stdin_open: true # docker run -i
-    tty: true # docker run -t
