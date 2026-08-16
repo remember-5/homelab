@@ -4,50 +4,57 @@ networks:
 
 services:
   server:
-    image: docker.gitea.com/gitea:1.26.4
+    image: docker.gitea.com/gitea:${GITEA_IMAGE_TAG:-1.27.1}
     container_name: gitea
+    restart: always
     environment:
-      - USER_UID=1000
-      - USER_GID=1000
+      - TZ=Asia/Shanghai
+      - USER_UID=${GITEA_UID:-1000}
+      - USER_GID=${GITEA_GID:-1000}
       - GITEA__database__DB_TYPE=postgres
       - GITEA__database__HOST=db:5432
-      - GITEA__database__NAME=gitea
-      - GITEA__database__USER=gitea
-      - GITEA__database__PASSWD=gitea
-      # 其他配置
-      - GITEA__server__DOMAIN=gitea.example.com
+      - GITEA__database__NAME=${GITEA_DB_NAME:-gitea}
+      - GITEA__database__USER=${GITEA_DB_USER:-gitea}
+      - GITEA__database__PASSWD=${GITEA_DB_PASSWORD:-change-this-password}
+      - GITEA__server__DOMAIN=${GITEA_DOMAIN:-gitea.007966.xyz}
+      - GITEA__server__ROOT_URL=${GITEA_ROOT_URL:-https://gitea.007966.xyz/}
       - GITEA__server__PROTOCOL=http
       - GITEA__server__HTTP_ADDR=0.0.0.0
       - GITEA__server__HTTP_PORT=3000
-      - GITEA__server__DISABLE_SSH=true # 关闭ssh
-      - GITEA__service__DISABLE_REGISTRATION=true # 关闭注册
-      - GITEA__service__REQUIRE_SIGNIN_VIEW=true # 关闭匿名访问
-      - GITEA__security__COOKIE_SECURE=true # https cookie安全
-      - GITEA__openid__ENABLE_OPENID_SIGNIN=false # 关闭OPENID登录
-      - GITEA__openid__ENABLE_OPENID_SIGNUP=false # 关闭OPENID注册
-      - GITEA__api__ENABLE_SWAGGER=false # 关闭swagger
-      #- GITEA__actions__DEFAULT_ACTIONS_URL=self # 本地的actions仓库
-    restart: always
+      - GITEA__server__DISABLE_SSH=true
+      - GITEA__service__DISABLE_REGISTRATION=true
+      - GITEA__service__REQUIRE_SIGNIN_VIEW=true
+      - GITEA__security__COOKIE_SECURE=${GITEA_COOKIE_SECURE:-true}
+      - GITEA__openid__ENABLE_OPENID_SIGNIN=false
+      - GITEA__openid__ENABLE_OPENID_SIGNUP=false
+      - GITEA__api__ENABLE_SWAGGER=false
     networks:
       - gitea
     volumes:
-      - ./gitea:/data
-      - /etc/timezone:/etc/timezone:ro
+      - ${GITEA_APPDATA_DIR:-/mnt/user/appdata/gitea/gitea}:/data
       - /etc/localtime:/etc/localtime:ro
     ports:
-      - "3000:3000"
-      - "222:22"  # 仅本地监听
+      - "${GITEA_HTTP_PORT:-3000}:3000"
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
   db:
-    image: postgres:14
+    image: postgres:${POSTGRES_IMAGE_TAG:-14}
+    container_name: gitea-postgres
     restart: always
     environment:
-        - POSTGRES_USER=gitea
-        - POSTGRES_PASSWORD=gitea
-        - POSTGRES_DB=gitea
+      - TZ=Asia/Shanghai
+      - POSTGRES_USER=${GITEA_DB_USER:-gitea}
+      - POSTGRES_PASSWORD=${GITEA_DB_PASSWORD:-change-this-password}
+      - POSTGRES_DB=${GITEA_DB_NAME:-gitea}
     networks:
-        - gitea
+      - gitea
     volumes:
-        - ./postgres:/var/lib/postgresql/data
+      - ${GITEA_POSTGRES_DIR:-/mnt/user/appdata/gitea/postgres}:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s

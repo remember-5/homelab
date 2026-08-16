@@ -1,0 +1,44 @@
+---
+# For configuration options and examples, please see:
+# https://gethomepage.dev/configs/settings/
+
+providers:
+  openweathermap: openweathermapapikey
+  weatherapi: weatherapiapikey
+
+title: Wang Homelab
+description: Unraid services and home infrastructure
+language: zh-Hans
+theme: dark
+color: slate
+target: _blank
+statusStyle: dot
+headerStyle: boxedWidgets
+hideVersion: false
+disableUpdateCheck: false
+disableIndexing: true
+showStats: true
+useEqualHeights: true
+
+quicklaunch:
+  searchDescriptions: true
+  hideInternetSearch: false
+  showSearchSuggestions: true
+  hideVisitURL: false
+
+layout:
+  System:
+    style: row
+    columns: 4
+  Network:
+    style: row
+    columns: 4
+  Media:
+    style: row
+    columns: 4
+  Downloads:
+    style: row
+    columns: 4
+  Observability:
+    style: row
+    columns: 4

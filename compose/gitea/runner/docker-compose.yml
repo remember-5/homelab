@@ -1,13 +1,15 @@
 services:
   runner:
-    image: docker.io/gitea/runner:1.0.8
-    restart: unless-stopped
+    image: docker.io/gitea/runner:latest
+    container_name: gitea-runner
+    restart: always
     environment:
-      CONFIG_FILE: /config.yaml
-      GITEA_INSTANCE_URL: "${INSTANCE_URL}"
-      GITEA_RUNNER_REGISTRATION_TOKEN: "${REGISTRATION_TOKEN}"
-      GITEA_RUNNER_NAME: "${RUNNER_NAME}"
-      GITEA_RUNNER_LABELS: "${RUNNER_LABELS}"
+      - TZ=Asia/Shanghai
+      - CONFIG_FILE=/config.yaml
+      - GITEA_INSTANCE_URL=${INSTANCE_URL}
+      - GITEA_RUNNER_REGISTRATION_TOKEN=${REGISTRATION_TOKEN}
+      - GITEA_RUNNER_NAME=${RUNNER_NAME}
+      - GITEA_RUNNER_LABELS=${RUNNER_LABELS}
     ports:
       - "8088:8088"
     volumes:

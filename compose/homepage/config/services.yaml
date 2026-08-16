@@ -1,0 +1,66 @@
+---
+# https://gethomepage.dev/configs/services/
+- System:
+    - Unraid:
+        icon: unraid.png
+        href: "http://192.168.123.2"
+        description: NAS and Docker host
+        siteMonitor: "http://192.168.123.2"
+    - Homepage:
+        icon: homepage.png
+        href: "http://192.168.123.2:1234"
+        description: Homelab dashboard
+        server: unraid
+        container: homepage
+        showStats: true
+
+- Network:
+    - Router:
+        icon: mdi-router-network
+        href: http://192.168.123.1
+        description: Gateway
+        ping: 192.168.123.1
+    - MetaCube:
+        icon: metacube.png
+        href: "http://192.168.123.2:9090/ui"
+        description: Proxy dashboard
+        siteMonitor: "http://192.168.123.2:9090/ui"
+    - 3x-ui:
+        icon: mdi-shield-key-outline
+        href: "http://192.168.123.2:2053"
+        description: Proxy panel
+        siteMonitor: "http://192.168.123.2:2053"
+
+- Media:
+    - Emby:
+        icon: emby.png
+        href: "http://192.168.123.2:8096"
+        description: Media server
+        siteMonitor: "http://192.168.123.2:8096"
+        server: unraid
+        container: embyserver
+        showStats: true
+    - Immich:
+        icon: immich.png
+        href: "http://192.168.123.2:2283"
+        description: Photos and videos
+        siteMonitor: "http://192.168.123.2:2283"
+    - OpenList:
+        icon: alist.png
+        href: "http://192.168.123.2:5244"
+        description: File listing
+        siteMonitor: "http://192.168.123.2:5244"
+
+- Downloads:
+    - SubBoost:
+        icon: mdi-subtitles-outline
+        href: "http://192.168.123.2:3044"
+        description: Subtitle tool
+        siteMonitor: "http://192.168.123.2:3044"
+
+- Observability:
+    - Gitea:
+        icon: gitea.png
+        href: "http://192.168.123.2:3000"
+        description: Git server
+        siteMonitor: "http://192.168.123.2:3000"

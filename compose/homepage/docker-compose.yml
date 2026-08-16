@@ -1,0 +1,26 @@
+services:
+  homepage:
+    image: ghcr.io/gethomepage/homepage:latest
+    container_name: homepage
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - TZ=Asia/Shanghai
+      - HOMEPAGE_ALLOWED_HOSTS=${HOMEPAGE_ALLOWED_HOSTS:-192.168.123.2:3000}
+      - HOMEPAGE_VAR_UNRAID_API_KEY=${HOMEPAGE_VAR_UNRAID_API_KEY:-}
+    volumes:
+      - ./config:/app/config
+      - ./icons:/app/public/icons:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    security_opt:
+      - no-new-privileges:true
+    labels:
+      - net.unraid.docker.webui=http://[IP]:[PORT:3000]
+      - net.unraid.docker.icon=https://cdn.jsdelivr.net/gh/selfhst/icons/png/homepage.png
+      - net.unraid.docker.shell=/bin/sh
+      - homepage.group=System
+      - homepage.name=Homepage
+      - homepage.icon=homepage.png
+      - homepage.href=http://192.168.123.2:3000
+      - homepage.description=Homelab dashboard

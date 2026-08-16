@@ -1,0 +1,11 @@
+:root {
+  --homepage-card-opacity: 0.82;
+}
+
+body {
+  letter-spacing: 0;
+}
+
+#page_container {
+  max-width: 1720px;
+}

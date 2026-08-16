@@ -1,22 +1,32 @@
-
 networks:
   gitea:
     external: false
 
 services:
   server:
-    image: docker.gitea.com/gitea:1.26.4
+    image: docker.gitea.com/gitea:${GITEA_IMAGE_TAG:-latest}
     container_name: gitea
-    environment:
-      - USER_UID=1000
-      - USER_GID=1000
     restart: always
+    environment:
+      - TZ=Asia/Shanghai
+      - USER_UID=${GITEA_UID:-1000}
+      - USER_GID=${GITEA_GID:-1000}
+      - GITEA__server__DOMAIN=${GITEA_DOMAIN:-gitea.007966.xyz}
+      - GITEA__server__ROOT_URL=${GITEA_ROOT_URL:-https://gitea.007966.xyz/}
+      - GITEA__server__PROTOCOL=http
+      - GITEA__server__HTTP_ADDR=0.0.0.0
+      - GITEA__server__HTTP_PORT=3000
+      - GITEA__server__DISABLE_SSH=true
+      - GITEA__service__DISABLE_REGISTRATION=true
+      - GITEA__service__REQUIRE_SIGNIN_VIEW=true
+      - GITEA__security__COOKIE_SECURE=${GITEA_COOKIE_SECURE:-true}
+      - GITEA__openid__ENABLE_OPENID_SIGNIN=false
+      - GITEA__openid__ENABLE_OPENID_SIGNUP=false
+      - GITEA__api__ENABLE_SWAGGER=false
     networks:
       - gitea
     volumes:
-      - ./gitea:/data
-      - /etc/timezone:/etc/timezone:ro
+      - ${GITEA_APPDATA_DIR:-./gitea}:/data
       - /etc/localtime:/etc/localtime:ro
     ports:
-      - "3000:3000"
-      - "222:22"
+      - "${GITEA_HTTP_PORT:-3000}:3000"

@@ -1,6 +1,6 @@
 services:
   embyserver:
-    image: amilys/embyserver:4.9.2.6
+    image: amilys/embyserver:latest
     container_name: embyserver
     privileged: true
     restart: unless-stopped

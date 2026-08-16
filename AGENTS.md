@@ -1,32 +1,47 @@
 # AGENTS.md
 
-This file defines the standards for Docker and Docker Compose content in this repository.
+This file defines the repository rules for Docker Compose services and mirror configuration notes.
 
 ## Role
 
-Act as a DevOps infrastructure assistant and provide Docker and Docker Compose deployment solutions. Documentation, comments, user-facing script output, and commit messages must be written in English by default. Use Chinese only when a service requires Chinese-language content or when the user explicitly requests it.
+Act as a DevOps infrastructure assistant. Provide practical Docker Compose deployment solutions that are easy to run, inspect, and migrate.
 
-## Directory and File Layout
+Documentation, comments, user-facing script output, and commit messages must be written in English by default. Use Chinese only when a service requires Chinese-language content or when the user explicitly asks for Chinese.
 
-Each service must use its own lowercase English directory named after the software:
+## Scope
 
+The main deployment entrypoint is `compose/`.
+
+Top-level directories are used as follows:
+
+```text
+compose/      Docker Compose service examples
+scripts/      Repository validation utilities
+MIRRORS.md    Mirror and registry notes
 ```
-<service-name>/
-├── docker-compose.yml              # Required primary deployment file
-├── README.md                       # Required English documentation
-├── .env                            # Optional local variables, never committed
-├── .env.example                    # Required sanitized template when .env is used
-├── config/                         # Optional mounted configuration
+
+## Service Layout
+
+Each Compose service should live in its own lowercase English directory named after the software:
+
+```text
+compose/<service-name>/
+├── docker-compose.yml              # Primary deployment file
+├── README.md                       # Service documentation
+├── .env                            # Local variables, never committed
+├── .env.example                    # Sanitized template when .env is needed
+├── config/                         # Mounted configuration
+├── data/                           # Local persistent data, not committed
 └── docker-compose-<variant>.yml    # Optional deployment variant
 ```
 
-- New services must use `docker-compose.yml` as the primary file. Migrate historical `compose.yml` files when modifying those services.
-- Use `docker-compose-<variant>.yml` for alternative deployments, such as `docker-compose-mysql.yml` or `docker-compose-cluster.yml`.
-- Keep mounted configuration in `config/`.
-- Store persistent data under `data/` or `./data`.
-- Ignore `.env` through `.gitignore`. Commit only `.env.example`, without usable passwords, keys, or tokens.
+New services must use `docker-compose.yml` as the primary deployment file. Historical `compose.yml` files may remain until that service is modified. When modifying a historical service, migrate it to `docker-compose.yml` unless there is a clear reason not to.
 
-## Docker Compose Standards
+Use `docker-compose-<variant>.yml` for alternative deployments, such as `docker-compose-postgres.yml`, `docker-compose-cluster.yml`, or `docker-compose-gpu.yml`.
+
+Template groups are allowed when a directory is intentionally a collection of variants, for example `compose/postgres/prod` and `compose/postgres/test`. In that case, the group directory should still have a short README that points to the runnable variants.
+
+## Compose Rules
 
 Use modern Compose syntax without a `version` declaration:
 
@@ -44,19 +59,18 @@ services:
       - ./data:/var/lib/<service-path>
 ```
 
-### Required Rules
+Required rules for new and modified services:
 
 | Rule | Requirement |
 | --- | --- |
-| Explicit image version | Do not use `latest`, `main`, `master`, or an untagged image. Use a concrete version such as `rabbitmq:4.0.5-management`. |
-| Restart policy | Every service must set `restart: always`. |
+| Image version | Use an explicit image tag or digest. Do not use `latest`, `main`, `master`, `release`, `stable`, untagged images, or other floating defaults. |
+| Restart policy | Every long-running service must set `restart: always`. |
 | Container name | Every service must set an explicit `container_name` based on the service name. |
-| Time zone | Every service environment must include `TZ=Asia/Shanghai`. |
+| Time zone | Every service environment must include `TZ=Asia/Shanghai` unless the image does not support `TZ`. |
 | Persistent data | Stateful services must mount persistent storage; do not keep data only inside a container. |
+| Secrets | Passwords, tokens, private keys, certificates, and production credentials must not be hardcoded in Compose YAML. |
 
-### Volumes
-
-Use relative mounts within the service directory when possible:
+Use relative mounts inside the service directory when possible:
 
 ```yaml
 volumes:
@@ -65,7 +79,7 @@ volumes:
   - ./logs:/var/log/<service>
 ```
 
-For data shared by multiple containers, use named volumes declared at the bottom of the file:
+Use named volumes only when they are shared by multiple containers or when the image specifically benefits from Docker-managed volumes:
 
 ```yaml
 volumes:
@@ -73,12 +87,7 @@ volumes:
   service_config:
 ```
 
-### Networks and Dependencies
-
-- Single-container services can use the default network.
-- Multi-container deployments must define a custom bridge network.
-- Use `depends_on` for startup dependencies.
-- For critical databases and caches, add a health check and prefer `condition: service_healthy` for dependent services.
+Single-container services can use the default network. Multi-container deployments should define a custom bridge network:
 
 ```yaml
 networks:
@@ -86,25 +95,37 @@ networks:
     driver: bridge
 ```
 
-### Environment Variables
+Use `depends_on` for startup dependencies. For critical databases and caches, add a health check and prefer `condition: service_healthy` for dependent services.
 
-- Use list syntax: `- KEY=VALUE`.
-- Small non-sensitive settings may be written directly under `environment`.
-- Passwords, keys, and tokens must be supplied through `.env` and `env_file` or via an external secret manager. Never hardcode production credentials in YAML.
+## Environment And Secrets
 
-### Optional Resource and Health Settings
+Use list syntax for Compose environment variables unless a copied upstream Compose file already uses mapping syntax:
 
-Apply resource limits to resource-intensive services when appropriate:
+```yaml
+environment:
+  - TZ=Asia/Shanghai
+  - SERVICE_PORT=8080
+```
+
+Small non-sensitive defaults may be written directly in Compose YAML. Secrets must be supplied through `.env`, `env_file`, or an external secret manager.
+
+If a Compose file uses `.env` or `${VARIABLE}` placeholders for required runtime values, add a sanitized `.env.example` next to it. Example values must be placeholders, not usable production credentials.
+
+Keep `.env` ignored by Git. Commit `.env.example` only.
+
+## Optional Settings
+
+Apply resource limits to heavy services when it helps prevent accidental host exhaustion:
 
 ```yaml
 deploy:
   resources:
     limits:
-      cpus: '4'
+      cpus: "4"
       memory: 4G
 ```
 
-Add health checks for important services:
+Add health checks for databases, caches, web applications, and services that other containers depend on:
 
 ```yaml
 healthcheck:
@@ -115,9 +136,7 @@ healthcheck:
   start_period: 10s
 ```
 
-### Proxy Template
-
-Keep this commented proxy template in services that may need it:
+Keep this commented proxy template in services that commonly need outbound network access:
 
 ```yaml
 # - http_proxy=http://127.0.0.1:1080
@@ -125,9 +144,9 @@ Keep this commented proxy template in services that may need it:
 # - no_proxy=localhost,127.0.0.1
 ```
 
-## README Standard
+## README Rules
 
-Every service directory must contain an English `README.md` with the following sections:
+Every runnable service directory must contain an English `README.md` with these sections:
 
 ```markdown
 # <Service Name>
@@ -146,36 +165,34 @@ docker compose up -d
 
 ## Configuration
 
-Explain non-standard settings in docker-compose.yml.
+Explain required variables, mounted paths, ports, and non-standard settings.
 
 ## Troubleshooting
 
-Document known issues and resolutions when applicable.
+Document known issues and useful commands.
 ```
 
-Document default addresses, ports, credentials, migration procedures, and plugin installation steps where applicable.
+Document default addresses, ports, credentials, migration procedures, plugin installation steps, and any required first-run setup.
 
 ## Prohibited Practices
 
-- Using `latest`, `main`, `master`, or untagged images.
+- Using floating image tags or untagged images for new and modified services.
 - Omitting persistent storage for stateful services.
-- Hardcoding production passwords in Compose YAML.
-- Omitting `restart: always`, `container_name`, or `TZ=Asia/Shanghai`.
-- Committing `.env`, private keys, certificates, or usable access tokens.
-- Adding non-English documentation or comments unless the user or service requirements explicitly call for them.
+- Hardcoding production passwords, tokens, private keys, certificates, or usable access credentials.
+- Committing `.env`, generated secrets, private keys, certificates, or local runtime state.
+- Adding non-English documentation or comments unless the user or service requirements explicitly call for it.
+- Adding a manual service index that must be updated every time a directory changes.
 
 ## Validation
 
-Run the following before committing to validate Compose parsing and Shell syntax:
+Keep validation lightweight and reliable.
+
+Run validation before committing:
 
 ```bash
 ./scripts/validate-repository.sh
 ```
 
-Run the strict audit after adding or modifying Compose services:
+The validation checks Compose parsing and Shell syntax. This is the default CI-level check.
 
-```bash
-./scripts/validate-repository.sh --strict
-```
-
-The strict audit checks floating image tags, obsolete `version` declarations, container names, restart policies, and time zone configuration. Historical examples may be migrated incrementally, but new changes must not introduce violations.
+Do not turn the validation script into a broad policy linter unless the repository is ready to enforce that policy on every existing service. For now, apply the Compose rules in this file during reviews and while adding or modifying services.

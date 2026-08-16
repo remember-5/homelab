@@ -1,32 +1,42 @@
-## Install
+# Gitea Runner
 
-```shell
-# 初始化config.yaml
-docker run --entrypoint="" --rm -it docker.io/gitea/runner:latest gitea-runner generate-config > config.yaml
-# 安装服务
+Gitea Actions runner.
+
+## Quick Start
+
+Generate `config.yaml`:
+
+```bash
+docker run --entrypoint="" --rm -it docker.io/gitea/runner:1.0.8 gitea-runner generate-config > config.yaml
+```
+
+Set the runner registration values in `.env` or in the shell:
+
+```env
+INSTANCE_URL=https://gitea.007966.xyz/
+REGISTRATION_TOKEN=change-this-token
+RUNNER_NAME=unraid-runner
+RUNNER_LABELS=ubuntu-latest:docker://node:20-bookworm
+```
+
+Start the runner:
+
+```bash
 docker compose up -d
 ```
 
+## Access
 
-## Uninstall
+- URL: configured by `INSTANCE_URL`
+- Default username: none
+- Default password: none
 
-卸载 or 重新安装
+## Configuration
 
-```shell
-docker compose down -v
-rm -rf ./data 
-```
+The runner keeps state in `./data` and reads configuration from `./config.yaml`.
 
+The Docker socket is mounted so the runner can start job containers. Treat this as privileged access.
 
+## Troubleshooting
 
-
-## Cache
-
-compose 已经把宿主机目录挂进容器了 `./data:/data`, 所以 config.yaml 里的 cache 路径建议写：
-```yaml
-cache:
-    enabled: true
-    dir: /data/cache
-    host: "192.168.123.1"
-    port: 8088 # 可以修改端口, compose需要一起修改
-```
+If cache is enabled in `config.yaml`, use `/data/cache` as the cache directory because `./data` is mounted into the container.
