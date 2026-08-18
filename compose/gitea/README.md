@@ -20,7 +20,7 @@ docker compose -f docker-compose-postgres.yml up -d
 
 ## Access
 
-- URL: `https://gitea.007966.xyz/`
+- URL: `https://gitea.example.com/`
 - Default username: created during first web setup
 - Default password: created during first web setup
 
@@ -30,8 +30,8 @@ Set these values in `.env` before starting the service:
 
 ```env
 GITEA_DB_PASSWORD=change-this-password
-GITEA_DOMAIN=gitea.007966.xyz
-GITEA_ROOT_URL=https://gitea.007966.xyz/
+GITEA_DOMAIN=gitea.example.com
+GITEA_ROOT_URL=https://gitea.example.com/
 GITEA_COOKIE_SECURE=true
 ```
 

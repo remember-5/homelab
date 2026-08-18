@@ -6,13 +6,6 @@
         href: "http://192.168.123.2"
         description: NAS and Docker host
         siteMonitor: "http://192.168.123.2"
-    - Homepage:
-        icon: homepage.png
-        href: "http://192.168.123.2:1234"
-        description: Homelab dashboard
-        server: unraid
-        container: homepage
-        showStats: true
 
 - Network:
     - Router:
@@ -32,14 +25,6 @@
         siteMonitor: "http://192.168.123.2:2053"
 
 - Media:
-    - Emby:
-        icon: emby.png
-        href: "http://192.168.123.2:8096"
-        description: Media server
-        siteMonitor: "http://192.168.123.2:8096"
-        server: unraid
-        container: embyserver
-        showStats: true
     - Immich:
         icon: immich.png
         href: "http://192.168.123.2:2283"
@@ -59,8 +44,3 @@
         siteMonitor: "http://192.168.123.2:3044"
 
 - Observability:
-    - Gitea:
-        icon: gitea.png
-        href: "http://192.168.123.2:3000"
-        description: Git server
-        siteMonitor: "http://192.168.123.2:3000"
