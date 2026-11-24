@@ -4,30 +4,39 @@ networks:
 
 services:
   server:
-    image: docker.gitea.com/gitea:${GITEA_IMAGE_TAG:-latest}
+    image: docker.gitea.com/gitea:28.4.0
     container_name: gitea
     restart: always
     environment:
+      # Time zone used inside the container.
       - TZ=Asia/Shanghai
-      - USER_UID=${GITEA_UID:-1000}
-      - USER_GID=${GITEA_GID:-1000}
-      - GITEA__server__DOMAIN=${GITEA_DOMAIN:-127.0.0.1:3000}
-      - GITEA__server__ROOT_URL=${GITEA_ROOT_URL:-http://127.0.0.1:3000/}
+      # Numeric user and group IDs for Gitea and its mounted /data directory.
+      - USER_UID=1000
+      - USER_GID=1000
+      # Hostname and full URL that users access. Set both for your Tunnel hostname.
+      - GITEA__server__DOMAIN=127.0.0.1
+      - GITEA__server__ROOT_URL=http://127.0.0.1:3000/
+      # HTTP listener inside the container. Cloudflare terminates public HTTPS.
       - GITEA__server__PROTOCOL=http
       - GITEA__server__HTTP_ADDR=0.0.0.0
       - GITEA__server__HTTP_PORT=3000
+      # Disable SSH Git access.
       - GITEA__server__DISABLE_SSH=true
+      # Disable self-registration and require sign-in to browse.
       - GITEA__service__DISABLE_REGISTRATION=true
       - GITEA__service__REQUIRE_SIGNIN_VIEW=true
-      - GITEA__security__COOKIE_SECURE=${GITEA_COOKIE_SECURE:-true}
+      # Send session cookies over HTTPS only.
+      - GITEA__session__COOKIE_SECURE=true
+      # Disable OpenID sign-in and account registration.
       - GITEA__openid__ENABLE_OPENID_SIGNIN=false
       - GITEA__openid__ENABLE_OPENID_SIGNUP=false
+      # Disable the interactive API documentation.
       - GITEA__api__ENABLE_SWAGGER=false
     networks:
       - gitea
     volumes:
-      - ${GITEA_APPDATA_DIR:-/mnt/user/appdata/gitea/gitea}:/data
+      - /mnt/user/appdata/gitea/gitea:/data
       - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
     ports:
-      - "${GITEA_HTTP_PORT:-3000}:3000"
+      - "3000:3000"

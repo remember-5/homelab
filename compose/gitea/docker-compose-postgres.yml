@@ -4,65 +4,83 @@ networks:
 
 services:
   server:
-    image: docker.gitea.com/gitea:${GITEA_IMAGE_TAG:-latest}
+    image: docker.gitea.com/gitea:28.4.0
     container_name: gitea
     restart: always
     environment:
+      # Time zone used inside the container.
       - TZ=Asia/Shanghai
-      - USER_UID=${GITEA_UID:-1000}
-      - USER_GID=${GITEA_GID:-1000}
+      # Numeric user and group IDs for Gitea and its mounted /data directory.
+      - USER_UID=1000
+      - USER_GID=1000
+      # Connect to the PostgreSQL service over the Compose network.
       - GITEA__database__DB_TYPE=postgres
       - GITEA__database__HOST=db:5432
-      - GITEA__database__NAME=${GITEA_DB_NAME:-gitea}
-      - GITEA__database__USER=${GITEA_DB_USER:-gitea}
-      - GITEA__database__PASSWD=${GITEA_DB_PASSWORD:-change-this-password}
-      - GITEA__server__DOMAIN=${GITEA_DOMAIN:-127.0.0.1:3000}
-      - GITEA__server__ROOT_URL=${GITEA_ROOT_URL:-http://127.0.0.1:3000/}
+      # Database name, login role, and required password used by Gitea.
+      - GITEA__database__NAME=gitea
+      - GITEA__database__USER=gitea
+      - GITEA__database__PASSWD=${GITEA_DB_PASSWORD:?Set GITEA_DB_PASSWORD in .env}
+      # Hostname and full URL that users access. Set both for your Tunnel hostname.
+      - GITEA__server__DOMAIN=127.0.0.1
+      - GITEA__server__ROOT_URL=http://127.0.0.1:3000/
+      # HTTP listener inside the container. Cloudflare terminates public HTTPS.
       - GITEA__server__PROTOCOL=http
       - GITEA__server__HTTP_ADDR=0.0.0.0
       - GITEA__server__HTTP_PORT=3000
-      - GITEA__server__DISABLE_SSH=true
+      # Enable SSH Git access and advertise the LAN address and host port in clone URLs.
+      - GITEA__server__DISABLE_SSH=false
+      - GITEA__server__SSH_DOMAIN=192.168.123.2
+      - GITEA__server__SSH_PORT=222
+      # Disable self-registration and require sign-in to browse.
       - GITEA__service__DISABLE_REGISTRATION=true
       - GITEA__service__REQUIRE_SIGNIN_VIEW=true
-      - GITEA__security__COOKIE_SECURE=${GITEA_COOKIE_SECURE:-true}
+      # Send session cookies over HTTPS only.
+      - GITEA__session__COOKIE_SECURE=false
+      # Disable OpenID sign-in and account registration.
       - GITEA__openid__ENABLE_OPENID_SIGNIN=false
       - GITEA__openid__ENABLE_OPENID_SIGNUP=false
+      # Disable the interactive API documentation.
       - GITEA__api__ENABLE_SWAGGER=false
     networks:
       - gitea
     volumes:
-      - ${GITEA_APPDATA_DIR:-/mnt/user/appdata/gitea/gitea}:/data
+      - /mnt/user/appdata/gitea/data:/data
       - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
     ports:
-      - "${GITEA_HTTP_PORT:-3000}:3000"
+      - "3000:3000"
       - "222:22"
     labels:
+      # unraid 使用
       - net.unraid.docker.webui=http://[IP]:[PORT:3000]
       - net.unraid.docker.icon=https://cdn.jsdelivr.net/gh/selfhst/icons/png/gitea.png
       - net.unraid.docker.shell=/bin/sh
+      # homepage 使用
       - homepage.group=Observability
       - homepage.name=Gitea
       - homepage.icon=gitea.png
-      - homepage.href=http://192.168.123.2:${GITEA_HTTP_PORT:-3000}
+      - homepage.href=http://192.168.123.2:3000
       - homepage.description=Git server
     depends_on:
       db:
         condition: service_healthy
 
   db:
-    image: postgres:${POSTGRES_IMAGE_TAG:-14}
+    image: postgres:18.7
     container_name: gitea-postgres
     restart: always
     environment:
+      # Time zone used inside the container.
       - TZ=Asia/Shanghai
-      - POSTGRES_USER=${GITEA_DB_USER:-gitea}
-      - POSTGRES_PASSWORD=${GITEA_DB_PASSWORD:-change-this-password}
-      - POSTGRES_DB=${GITEA_DB_NAME:-gitea}
+      # Initial PostgreSQL superuser and its password.
+      - POSTGRES_USER=gitea
+      - POSTGRES_PASSWORD=${GITEA_DB_PASSWORD:?Set GITEA_DB_PASSWORD in .env}
+      # Database created when the PostgreSQL data directory is initialized.
+      - POSTGRES_DB=gitea
     networks:
       - gitea
     volumes:
-      - ${GITEA_POSTGRES_DIR:-/mnt/user/appdata/gitea/postgres}:/var/lib/postgresql/data
+      - /mnt/user/appdata/gitea/postgres:/var/lib/postgresql
     labels:
       - net.unraid.docker.icon=https://cdn.jsdelivr.net/gh/selfhst/icons/png/postgresql.png
       - net.unraid.docker.shell=/bin/sh
