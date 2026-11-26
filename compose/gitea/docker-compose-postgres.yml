@@ -13,6 +13,9 @@ services:
       # Numeric user and group IDs for Gitea and its mounted /data directory.
       - USER_UID=1000
       - USER_GID=1000
+      # Audit Logging
+      - GITEA__audit__RECORD_OUTPUT=database
+      - GITEA__audit__RETENTION_DAYS=30
       # Connect to the PostgreSQL service over the Compose network.
       - GITEA__database__DB_TYPE=postgres
       - GITEA__database__HOST=db:5432
